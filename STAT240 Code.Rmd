@@ -1,0 +1,335 @@
+---
+title: "Suicide Project"
+author: "Tina Cao, Tianyou Wen, Haoyu Xu"
+date: "7/31/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+library(tidyverse)
+library(lubridate)
+library(kableExtra)
+source("../scripts/viridis.R")
+source("../scripts/ggprob.R")
+```
+
+## Introduction
+
+In recent decades, the world is getting more prosperous and many countries are developing in high speed. However, along with the development of countries, the suicide rate also changes as year passes. Each year, more than 700,000 people kill themselves and even more people attempted to suicide. It's the fourth leading cause of death for teenagers and it is important for us to research about it. 
+
+There are many factors that might relate to the suicide rate in the world. For this project, we are going to analyze some factors including sex, year, age groups, and wealth (measured by GDP per capita). We are going to explore how these factors relate to the suicide rate. We are also going to focus on the relationship between GDP per capita and suicide rate as we believe that poor people are more likely to kill themselves than rich people. This report will analyze this hypothesis. However, we concluded at the end that there is a minor positive relationship between GDP per capita and suicide rate. We also discussed that wealth is not the only factor that affect suicide rate.
+
+We are going to have several questions regarding to examining our questions of interests. We selected two countries of interests for the first three questions. The first question is intended to explore the relationship between sex, year and suicide rate. The second question is intended to explore the relationship between age and suicide rate. The third question is intended to explore the relationship between GDP per capita and suicide rate. Finally, we will examine whether there is a relationship between GDP per capita and suicide rate for all countries (question 4).
+
+
+## Background
+
+```{r, include=FALSE}
+suicide = read.csv("../data/suicide.csv") %>%
+  rename("suicides_per_100k" = "suicides.100k.pop",
+         "countryyear" = "country.year",
+         "HDI_for_year" = "HDI.for.year",
+         "gdp_for_year" = "gdp_for_year....",
+         "gdp_per_capita" = "gdp_per_capita....")
+```
+
+Source: https://www.kaggle.com/russellyates88/suicide-rates-overview-1985-to-2016
+
+The data set we are analyzing is titled "Suicide Rates Overview 1985 to 2016". It describes suicide rates for different demographic groups and different sexes from 1985 to 2016 for 101 countries. Besides suicide rates, the data set also includes GDP, GDP per capita, and HDI. The data set was published on the open data sets website Kaggle and was collected by an individual named Rusty. Rusty pulled data from other data sets and compiled them into the data set we are analyzing now. He pulled HDI data from the United Nations, GDP data from the World Bank, suicide data from Kaggle (data originally belongs to WHO).
+The data set seems to only include a selection of countries (101 countries) due to unknown reasons. The data set was aimed to examine associations like different suicide rates in different countries and suicide rates across the socio-economic spectrum. 
+
+Variables in the data set and their meanings:
+
+- `country` = country names
+- `year` = the year that suicides happened
+- `sex` = sex (male or females)
+- `age` = age groups (5-14 years, 15-24 years, 25-34 years, 35-54 years, 55-74 years, 75+ years)
+- `suicides_no` = number of suicides
+- `population` = population
+- `suicides_per_100k` = suicide rate (or number of suicides per 100,000 people)
+- `gdp_for_year` = GDP (Gross Domestic Product) for the particular year
+- `gdp_per_capita` = GDP per capita
+
+Before digging into our analysis, we are going to provide some background information about some of the variables:
+
+- The suicide rate (`suicides_per_100k` variable) is calculated by the formula: the number of suicide deaths (`suicides_no` variable) divided by the population (`population` variable) and multiplied by 100,000. It is important to know that the unit of measure for the suicide rate is per 100,000 population. 
+- GDP (`GDP_for_year` variable) is the standard measure of the value added created through the production of goods and services in a country for a period of time. GDP gives important information about the size of economy and how an economy is performing. 
+- GDP per capita (`GDP_per_capita` variable) is calculated by dividing the the GDP of a country by its population. 
+
+Unusual Factors: 
+
+- There are also missing values on the `year` variable. Some countries have rows for year 2016 but most countries do not. There might also be some other missing values for the `year` variable which could potentially cause our analysis to be inconsistent. 
+- There are only 101 countries in the data set while there are 195 countries in the world. When we are doing analysis to see how suicide rates vary across countries, we are only going to analyze 101 countries. This might cause our analysis to be incomplete due to the incomplete nature of the data set.
+
+Note: In this project, we use suicide rate, suicide numbers per 100k, and suicide rate interchangeably. 
+
+Data summaries:
+
+1. The following table displays the first ten rows of our raw data set:
+
+```{r, echo=FALSE}
+overall2 = suicide[1:10,] %>%
+  select(-countryyear, -HDI_for_year, -generation) %>%
+  kable(caption="Raw Data Set (First 10 Rows)") %>%
+  kable_classic(full_width = F, html_font = "Cambria", font_size = 12)
+overall2
+```
+
+2. The following graph shows how the overall suicide rate (per 100k people) change over year. We see that the suicide rate increases during the period from 1985 to 1995 and gradually decreases during the period from 1995 to 2016. The peak is at year 1995 with a suicide rate about 15.3. This means that in year 1995 about 15 people died from suicide per 100,000 people. 
+
+```{r, echo=FALSE}
+overall = suicide %>%
+  group_by(year) %>%
+  summarise(suicides_per_100k = sum(suicides_no) / sum(population) * 100000)
+
+ggplot(overall, aes(x=year, y=suicides_per_100k)) +
+  geom_point() +
+  geom_line(color="red") +
+  scale_x_continuous(breaks=c(1985:2016)) +
+  theme(axis.text.x = element_text(angle=45, hjust=1)) + 
+  xlab("Year") +
+  ylab("Suicide Rate") +
+  ggtitle("Overall Suicide Rate with Year")
+```
+
+3. The following graph shows how the suicide rate (per 100k people) change over year by each country. The light grey lines represent the change of suicide rates over year for the 101 countries. The red line represents the change of the overall suicide rate over year (representing information from the above graph). We see that a lot of countries' suicide rates are below the norm while some countries' suicide rates are above the norm by a large scale. The line on the top of the graph represents the suicide rates of the country **Lithuania**. We also included a table that tells the change of suicide rates over year for Lithuania. Lithuania has the highest suicide rate in 1996 which is about 51 and this corresponds to the peak in the graph we discussed above. The reason behind the peak for the overall suicide rate might due to large suicide rates of individual countries, in this case Lithuania and other countries.
+
+```{r, echo=FALSE}
+overall1 = suicide %>%
+  group_by(year, country) %>%
+  summarise(suicides_per_100k = sum(suicides_no) / sum(population) * 100000)
+
+ggplot() +
+  geom_line(data=overall1, mapping=aes(x=year, y=suicides_per_100k, group=country), color="grey", size=0.3) +
+  geom_line(data=overall, mapping=aes(x=year, y=suicides_per_100k), color="red") +
+  scale_x_continuous(breaks=c(1985:2016)) +
+  theme(axis.text.x = element_text(angle=45, hjust=1)) + 
+  xlab("Year") +
+  ylab("Suicide Rate") +
+  ggtitle("Suicide Rate with Year by Country")
+```
+
+```{r, echo=FALSE}
+overall1 %>%
+  filter(country == "Lithuania") %>%
+  kable(caption="Suicide Rates over Year for Lithuania") %>%
+  kable_classic(full_width = F, html_font = "Cambria", font_size = 12)
+```
+
+
+## Analysis
+
+From our data summaries, we are impressed to see that Lithuania has very high suicide rates and we would like to analyze factors that are possibly related to the high suicide rates in Lithuania. We would like to explore this through three parts sex, year, age groups, and wealth (measured by GDP per capita). We would also want to compare the information with the United States. 
+
+### Question 1 (Sex, Year): How does the suicide rates change over year for males and females for Lithuania and the United States?
+
+We first filtered out data for Lithuania and the United States and grouped it by year and sex. We then calculated the suicide rates for different sexes per year. To make the data easier to visualize, we created two bar plots, one for Lithuania and one for the United States. The x-axis represents the year and the y-axis represents the suicide rate. We used yellow to represent males and purple to represent females. From the graphs, we see that, for both Lithuania and the United States, the trends for males and females are extremely similar, but females generally have less suicide rate. 
+
+For Lithuania, we analyzed data from 1995 to 2016. We see that the overall trend of suicide rate for males and females is decreasing. There are fluctuations for some years. The suicide rate of males is much higher than the suicide rate of females.
+
+```{r, echo=FALSE}
+suicide1a = suicide %>%
+  filter(country == "Lithuania") %>%
+  group_by(country, year, sex) %>%
+  summarise(suicides_per_100k = sum(suicides_no) / sum(population) * 100000)
+
+ggplot(suicide1a, aes(x=year, y=suicides_per_100k, fill=sex)) +
+  geom_col(position="dodge") +
+  scale_x_continuous(breaks=c(1995:2016)) +
+  theme(axis.text.x = element_text(angle=45, hjust=1)) + 
+  ylim(c(0,90)) +
+  xlab("Year") +
+  ylab("Suicide Rate") +
+  ggtitle("The Change of Suicide Rates over Year for Males and Females for Lithuania")
+```
+
+For the US, we analyzed data from 1985 to 2015. We see that both male and female suicide rates decrease from 1985 to 2000 and reach the lowest point in around 2000 and increase from 2000 to 2015 and reach the highest point in 2015. The suicide rate of males is much higher than the suicide rate of females.
+
+```{r, echo=FALSE}
+suicide1b = suicide %>%
+  filter(country == "United States") %>%
+  group_by(country, year, sex) %>%
+  summarise(suicides_per_100k = sum(suicides_no) / sum(population) * 100000)
+
+ggplot(suicide1b, aes(x=year, y=suicides_per_100k, fill=sex)) +
+  geom_col(position="dodge") +
+  scale_x_continuous(breaks=c(1985:2015)) +
+  theme(axis.text.x = element_text(angle=45, hjust=1)) + 
+  ylim(c(0,90)) +
+  xlab("Year") +
+  ylab("Suicide Rate") +
+  ggtitle("The Change of Suicide Rates over Year for Males and Females for the US")
+```
+
+Overall, both Lithuania and the US share common trait that is the suicide rate of males is much higher than the suicide rate of females for every year. However, one thing to notice is that the suicide rate for Lithuania is much higher than the suicide rate for the US for both males and females.
+
+### Question 2 (Age Group): How does the suicide rates change over different age groups for Lithuania and the United States for all years?
+
+We first filtered out data for Lithuania and the United States and grouped it by age. We then calculated the suicide rates for different age groups. To make the data easier to visualize, we created two bar plots. The x-axis represents age groups and the y-axis represents suicide rate. Although the trends are not very similar for Lithuania and the United States, one common trait they share is that the age group 05-14 years has the lowest suicide rate. This is probably because children don't have the abilities to commit suicide.
+
+For Lithuania, the suicide rate increases as people get older until they reach 35-54 years old where they have the highest suicide rate. The suicide rate gradually decreases after 55 years old. According to our conjecture, as people grow older, the social pressure they bear also increases. For people in the age group 35-54 years, they might bear with more social pressure than other age groups due to factors like getting fired and supporting their families. 
+
+```{r, echo=FALSE}
+suicide2a = suicide %>%
+  filter(country == "Lithuania") %>%
+  group_by(age) %>% 
+  summarise(suicides_per_100k = sum(suicides_no) / sum(population) * 100000)
+suicide2a$age[suicide2a$age == "5-14 years"] = "05-14 years"
+suicide2a <- suicide2a %>%
+  arrange(age)
+
+ggplot(suicide2a, aes(x=age, y=suicides_per_100k)) +
+  geom_col() +  
+  ylim(c(0,60)) +
+  xlab("Age Groups") +
+  ylab("Suicide Rate") +
+  ggtitle("The Change of Suicide Rates over Year for Different Age Groups for Lithuania") 
+```
+
+For the United States, the age group 75+ years has the highest suicide rate. This is probably because older people suffer in great pain from bad illness and they would want to end their lives so that they don't have to suffer in pain. Overall, the suicides rate is increasing as age increases. There is also a little bump at age group 35-54 years.
+
+```{r, echo=FALSE}
+suicide2b = suicide %>%
+  filter(country == "United States") %>%
+  group_by(age) %>% 
+  summarise(suicides_per_100k = sum(suicides_no) / sum(population) * 100000)
+suicide2b$age[suicide2b$age == "5-14 years"] = "05-14 years"
+suicide2b <- suicide2b %>%
+  arrange(age)
+
+ggplot(suicide2b, aes(x=age, y=suicides_per_100k)) +
+  geom_col() +
+  ylim(c(0,60)) +
+  xlab("Age Groups") +
+  ylab("Suicide Rate") +
+  ggtitle("The Change of Suicide Rates over Year for Different Age Groups for the US")
+```
+
+One thing to notice is that the suicide rate for Lithuania is much higher than the suicide rate for the US for all age groups.
+
+### Question 3 (GDP per capita): How does GDP per capita affect the suicide rates for Lithuania and the United States for all years?
+
+We first filtered out data for Lithuania and the United States and grouped it by year. We then calculated the suicide rates for all people per year and the GDP per capita. We believe that GDP per capita is a representation of people's wealth. We plotted the data into the graphs to see how GDP per capita is correlated with suicide rate for Lithuania and the US. One data point represents one year.
+
+For Lithuania, we can see that the suicide rate decreases as GDP per capita increases. The suicide rate hits the lowest when the GDP per capita is around $14,000. After that, suicide rate increases as GDP per capita increases. 
+
+```{r, echo=FALSE}
+suicide3a <- suicide %>%
+  filter(country == "Lithuania") %>%
+  group_by(year) %>%
+  summarize(suicide_per_100k = sum(suicides_no) / sum(population) * 100000, 
+            gdp_per_capita = mean(gdp_per_capita)) %>%
+  distinct(gdp_per_capita, suicide_per_100k)
+
+ggplot(suicide3a, aes(x = gdp_per_capita, y = suicide_per_100k)) +
+  geom_point() +
+  geom_smooth(se=FALSE) +
+  xlab("GDP Per Capita") +
+  ylab("Suicide Rate") +
+  ggtitle("Relationship Between GDP per Capita and Suicide Rate for Lithuania")
+```
+
+For the US, We can see that for those years GDP per capita are low and for those years they are high, the suicide rate is high, but for for those years when GDP per capita is at a average position, suicide rate is low. This might due to the fact that poorer people attempt suicide because they can't support themselves and richer people attempt suicide because they suffer from social pressures.
+
+```{r, echo=FALSE}
+suicide3b <- suicide %>%
+  filter(country == "United States") %>%
+  group_by(year) %>%
+  summarize(suicide_per_100k = sum(suicides_no) / sum(population) * 100000, 
+            gdp_per_capita = mean(gdp_per_capita)) %>%
+  distinct(gdp_per_capita, suicide_per_100k)
+
+ggplot(suicide3b, aes(x = gdp_per_capita, y = suicide_per_100k)) +
+  geom_point() +
+  geom_smooth(se=FALSE) +
+  xlab("GDP Per Capita") +
+  ylab("Suicide Rate") +
+  ggtitle("Relationship Between GDP per Capita and Suicide Rate for the US")
+```
+
+From the graphs, we noticed that the GDP per capita for the US is much higher than the GDP per capita for Lithuania. We also see a very strong non-linear relationship between suicide rate and GDP per capita. We are guessing that this is due to the fact that we have a strong Year trend. For the US, we are analyzing data for about 31 years and that's why there is a very strong non-linear relatinoship. For Lithuania, we are analyzing data for about 22 years and that's why there is a relatively minor non-linear relationship. As a result, we decided to include how GDP per capita changes over Year for both Lithuania and the US. 
+
+```{r, echo=FALSE}
+suicide3aa = suicide %>%
+  filter(country == "Lithuania") %>%
+  group_by(year) %>%
+  summarize(gdp_per_capita = mean(gdp_per_capita))
+
+ggplot(suicide3aa, aes(x = year, y = gdp_per_capita)) +
+  geom_point() +
+  geom_smooth(se=FALSE, method="lm", color="orange") +
+  xlab("Year") +
+  ylab("GDP per capita") +
+  ggtitle("Change of GDP per Capita over Year for Lithuania")
+```
+
+```{r, echo=FALSE}
+suicide3bb = suicide %>%
+  filter(country == "United States") %>%
+  group_by(year) %>%
+  summarize(gdp_per_capita = mean(gdp_per_capita))
+
+ggplot(suicide3bb, aes(x = year, y = gdp_per_capita)) +
+  geom_point() +
+  geom_smooth(se=FALSE, method="lm", color="orange") +
+  xlab("Year") +
+  ylab("GDP per capita") +
+  ggtitle("Change of GDP per Capita over Year for the US")
+```
+
+We see that for both Lithuania and the US, their GDP per capita increase as year increases. This explains the strong non-linear relationship between GDP per capita and suicide rate. 
+
+### Question 4: For all years, what is the relationship between GDP per capita and suicide rate for all countries?
+
+This question examines wether there is a relationship between GDP per capita and suicide rate for all countries in the dataset for all years. Before doing any analysis, we discussed that there might be a positive relationship between GDP per capita and suicide rate. This is because GDP per capita is a measurement for one's wealth and we thought if someone is rich, he/she is less likely to kill himself/herself. 
+
+In order to answer this question, we first grouped our data by year and country. We summarised the GDP per capita for each country and each year and then we calculated the suicide rate for each country and each year.
+
+In order to make our discovery more obvious, we decided to make a scatterplot using the data frame we created. Each point in the scatterplot stands for a year of a country. We also graphed a linear trend line to show the relationship between GDP per capita and suicide rate for all countries and all years. The resulting graph is as followed:
+
+```{r, echo=FALSE}
+suicide4 = suicide %>%
+  group_by(year, country) %>%
+  summarise(gdp_per_capita = gdp_per_capita,
+            suicides_per_100k = sum(suicides_no) / sum(population) * 100000) %>%
+  distinct()
+
+ggplot(suicide4, aes(x = gdp_per_capita, y = suicides_per_100k)) +
+  geom_point() +
+  geom_smooth(se=FALSE, method="lm") +
+  xlim(c(0, 150000)) +
+  xlab("GDP Per Capita") +
+  ylab("Suicide Rate") +
+  ggtitle("Relationship Between GDP per Capita and Suicide Rate for All Countries")
+```
+
+The linear trend line is flat, however, we see a minor positive relationship between GDP per capita and suicide rate for all countries.
+
+
+## Discussion
+Besides wealth (measured by GDP per capita), what other factors that would affect suicide rate? We summarized the following points:
+
+1. Bad government environment leads to social instability
+2. Great working pressure
+3. Small population leads to an excessive impact of individuals on the suicide rate
+4. Lack of social welfare. 
+
+There are many more factors that could affect suicide rate. If we try to improve these factors, we could potentially prevent suicides. 
+
+In this project, we focused on the impact of sex, year, age groups, and wealth on the suicide rate and took Lithuania and the United States as the main research objects. Before we started, we guessed that wealth (measure by GDP per capita) might be one of the most important influences of suicide rate. From our analysis, people who have low GDP per capita and people who have high GDP per capita both have high suicide rate in the United States. If we broaden our perspective to the world, as the example in Question 4 shown, wealth (measured by GDP per capita) had little effect on suicide rate for all countries. Except GDP, we also discussed how sex, year and age groups influence suicide rate. We found that there is a big gap between suicide rate for males and suicide rate for females. The suicide rate of male is much higher than that of female. We also found that people in their mid to late ages are more likely to kill themselves.
+
+Even though we analysed a lot of data, the research do have some shortages. Firstly, the error caused by insufficient number of samples can not be ignored. We just discussed data for 32 years and not all countries have data for 32 years. Also, not all countries are in our data set. The error was not mini enough to be ignored. Secondly, there were many trends affecting the suicide rate. The analysis of the impact of a single factor on the suicide rate was based on idealization. For example, in Question 3 and Question 4, we hypothesized that wealth (measured by GDP per capita) is the only factor that influences suicide rate. However, factors like social environment and current events could influence the suicide rate.
+
+In the future, in order to conduct a better and more accurate research analysis, we need to include other factors in our analysis too. Analyzing their impacts on suicide rate one by one and finally integrate them. Using larger sample data to reduce errors. Besides, grouping by age and country and analyzing various factors separately are also important for analyzing suicide rate.
+
+Primary conclusions:
+
+1. The suicide rate of male is much higher than the suicide rate of female. 
+2. People in their mid to late ages are more likely to kill themselves.
+3. Wealth (measured by GDP per capita) has a minor positive effect on suicide rate. 
+
+## References
+
+^[Rusty. 2018. Suicide Rates Overview 1985 to 2016 [Data set]. Kaggle. Retrieved from https://www.kaggle.com/russellyates88/suicide-rates-overview-1985-to-2016]
+^[World Health Organization. (n.d.). Suicide. Retrieved from https://www.who.int/news-room/fact-sheets/detail/suicide.]
